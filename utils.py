@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from tempfile import NamedTemporaryFile
 
 # Load Haar Cascade
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -30,3 +31,25 @@ def blur_faces(image, faces, style="blur", intensity=50, show_box=False):
             cv2.rectangle(result, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
     return result
+
+def process_video(input_path, style, intensity, show_box):
+    cap = cv2.VideoCapture(input_path)
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    output_temp = NamedTemporaryFile(delete=False, suffix=".mp4")
+    out = cv2.VideoWriter(output_temp.name, fourcc, fps, (width, height))
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        faces = detect_faces(frame)
+        blurred_frame = blur_faces(frame, faces, style=style, intensity=intensity, show_box=show_box)
+        out.write(blurred_frame)
+
+    cap.release()
+    out.release()
+    return output_temp.name
