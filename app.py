@@ -2,12 +2,20 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import cv2
-from utils import detect_faces, blur_faces , process_video
+from utils import detect_faces_dnn, blur_faces, process_video
 import tempfile
 
 st.set_page_config(page_title="Face Blur App", layout="centered")
-st.title("🕵️ Face Blur App (Image Mode)")
+st.title("🕵️ Face Blur App")
 
+# Sidebar Controls — shared by both image and video
+st.sidebar.title("⚙️ Blur Settings")
+style = st.sidebar.selectbox("Masking Style", ["blur", "pixelate", "blackbar", "emoji"])
+blur_strength = st.sidebar.slider("Blur Intensity (for Gaussian)", 15, 99, 51, step=2)
+show_boxes = st.sidebar.checkbox("Show Bounding Boxes", value=False)
+
+# ------------------------- IMAGE SECTION -------------------------
+st.header("🖼️ Image Face Blur")
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
@@ -17,14 +25,7 @@ if uploaded_file:
 
     st.image(image, caption="Original Image", use_column_width=True)
 
-    # Controls
-    st.sidebar.title("⚙️ Settings")
-    style = st.sidebar.selectbox("Masking Style", ["blur", "pixelate", "blackbar"])
-    blur_strength = st.sidebar.slider("Blur Intensity (for Gaussian)", 15, 99, 51, step=2)
-    show_boxes = st.sidebar.checkbox("Show Bounding Boxes", value=False)
-
-    # Process
-    faces = detect_faces(img_bgr)
+    faces = detect_faces_dnn(img_bgr)
     result = blur_faces(img_bgr, faces, style=style, intensity=blur_strength, show_box=show_boxes)
     result_rgb = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
     result_pil = Image.fromarray(result_rgb)
@@ -36,14 +37,8 @@ if uploaded_file:
         result_pil.save(tmp.name)
         st.download_button("⬇️ Download Blurred Image", open(tmp.name, "rb"), file_name="blurred.png", mime="image/png")
 
+# ------------------------- VIDEO SECTION -------------------------
 st.header("🎞️ Video Face Blur")
-# Sidebar Controls — shared by both image and video processing
-st.sidebar.title("⚙️ Blur Settings")
-style = st.sidebar.selectbox("Masking Style", ["blur", "pixelate", "blackbar"])
-blur_strength = st.sidebar.slider("Blur Intensity (Gaussian)", 15, 99, 51, step=2)
-show_boxes = st.sidebar.checkbox("Show Bounding Boxes", value=False)
-
-
 video_file = st.file_uploader("Upload a video", type=["mp4", "avi"], key="video")
 
 if video_file:
